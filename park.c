@@ -103,15 +103,10 @@ typedef struct parks {
 
 park *parks; // Define pointers to park structures
 char **cars; // Define array of strings for cars
-// Define pointer to struct parks for query purposes
+
 struct parks *qparks;
 int live[5]; // Define array of integers for the live status
 
-/**
-   Truncates the given string by appending a null terminator at the end.
-   @param str The string to be truncated
-   @return The truncated string
-*/
 char *str_end(char *str) {
     size_t i;
     for (i = BASE; i < strlen(str); i++);
@@ -119,33 +114,23 @@ char *str_end(char *str) {
     return str;
 }
 
-/**
-   Deletes leading and trailing blanks from a string.
-   @param str The input string
-   @return The modified string with leading and trailing blanks removed
-*/
 char *del_blank(char *str) {
     char *ptr = str;
     int prev_blank, i, j, null;
     prev_blank = i = j = null = BASE;
 
-    // Reset comma count
     comma_count = BASE;
 
-    // Iterate through the string
     while (*ptr) {
-        // Count commas
         if (*ptr == STR_CDEF)
             comma_count++;
 
-        // Process characters except within quoted parts
         if (comma_count != FRST) {
             // Remove leading blanks
             if (isspace(*ptr))
                 if (!prev_blank)
                     str[prev_blank = i++] = BLNK_CHR;
 
-            // Copy non-blank characters
             if (!isspace(*ptr) && (prev_blank = null) == BASE)
                 str[i++] = *ptr;
         } else {
@@ -155,10 +140,8 @@ char *del_blank(char *str) {
         ptr++;
     }
 
-    // Terminate the string
     str[i] = STR_END;
 
-    // Check if the resulting string is empty
     if (str[j] == BLNK_CHR && str[j + FRST] == STR_END)
         return NULL_STR;
     else if (str[j++] == BLNK_CHR && str[j++] == BLNK_CHR && str[j] == STR_END)
@@ -168,31 +151,17 @@ char *del_blank(char *str) {
     return str;
 }
 
-/**
-   Reads a line from standard input into the provided buffer and returns it.
-   @param args Buffer to store the input line
-   @return The input line read from stdin
-*/
 char *get(char *args) {
     char *input = str_end(fgets(args, BUFSIZ, stdin));
     return input;
 }
 
-/**
-   Checks if the command is not equal to the quit command.
-   @param cmd The command to check
-   @return Returns false if the command is the quit command, otherwise true
-*/
 int not_q_cmd(char *cmd) {
     if (!strcmp(cmd, NULL_STR))
         return FALSE;
     return strcmp(cmd, Q_CMD);
 }
 
-/**
-   Checks if the given token is null and updates its length if not.
-   @param tok The token to check
-*/
 void ck_tok_null(char* tok) {
     if (tok == NULL)
         tok_len = BASE;
@@ -200,23 +169,16 @@ void ck_tok_null(char* tok) {
         tok_len = strlen(tok);
 }
 
-/**
-   Gets the token from the given string until a closing quotation mark or space.
-   @param str The input string
-   @return The extracted token
-*/
 char* get_tok(char *str) {
     size_t i, len = strlen(str);
     tok_len = BASE;
     char* token;
 
-    // Find the position of the closing quotation mark
     for (i = BASE; i < len; i++)
         if (str[i] == STR_CDEF)
             break;
-    i++; // Move to the character after the closing quotation mark
+    i++;
 
-    // If comma count is non-zero, extract token using strtok
     if (comma_count) {
         while(i--)
             str++;
@@ -224,15 +186,10 @@ char* get_tok(char *str) {
         return token;
     }
 
-    // Otherwise, extract token using strtok
     ck_tok_null(token = strtok(NULL, BLNK_STR));
     return token;
 }
 
-/**
-   Checks if an error has occurred and resets the error flag.
-   @return Returns true if an error has occurred, otherwise false
-*/
 int ckreset_error() {
     if (had_error) {
         had_error = FALSE;
@@ -241,11 +198,6 @@ int ckreset_error() {
     return FALSE;
 }
 
-/**
-   Checks if a parking spot with the given name exists.
-   @param name The name of the parking spot to search for
-   @return Returns true if the parking spot exists, otherwise false
-*/
 int park_exist(char *name) {
     int i = BASE;
     while (i < park_size) {
@@ -260,11 +212,6 @@ int park_exist(char *name) {
     return FALSE;
 }
 
-/**
-   Checks if a parking spot is unavailable and prints an error message.
-   @param spot The parking spot to check
-   @return Returns true if the spot is unavailable, otherwise false
-*/
 int ckspot_out(int spot) {
     if (spot > BASE)
         return FALSE;
@@ -274,13 +221,6 @@ int ckspot_out(int spot) {
     return TRUE;
 }
 
-/**
-   Checks if the given cost values are invalid and prints an error message.
-   @param v15 The cost for 15 minutes
-   @param v1h15 The cost for 1 hour and 15 minutes
-   @param vmax The maximum cost
-   @return Returns true if the cost values are invalid, otherwise false
-*/
 int ckcost_out(float v15, float v1h15, float vmax) {
     if (BASE < v15 && v15 < v1h15 && v1h15 < vmax)
         return FALSE;
@@ -290,10 +230,6 @@ int ckcost_out(float v15, float v1h15, float vmax) {
     return TRUE;
 }
 
-/**
-   Checks if there are available spots and prints an error message if not.
-   @return Returns false if there are available spots, otherwise true
-*/
 int ckpark_out() {
     int len = park_size, count_free = BASE;
     
@@ -302,21 +238,14 @@ int ckpark_out() {
         if (parks[len] == NULL)
             count_free++;
 
-    // If there are free parking spots, return false
     if (count_free)
         return FALSE;
 
-    // If all parking spots are occupied, set error flag and print error message
     had_error = TRUE;
     printf(ERROR_PARKS_OUT);
     return TRUE;
 }
 
-/**
-   Checks if there are spots in a parking and prints an error message if not.
-   @param name The name of the parking
-   @return Returns VALID if there are available spots, otherwise INVALID
-*/
 int ckpark_full(char *name) {
     for (int i = NINT; i < park_size; i++) {
         if (parks[i] != NULL) {
@@ -326,71 +255,37 @@ int ckpark_full(char *name) {
             }
         }
     }
-    
-    // If all spots are occupied, set error flag and print error message
+
     had_error = TRUE;
     printf(ERROR_SFORMAT, name, ERROR_PARK_FULL);
     return TRUE;
 }
 
-/**
-   Checks if they are uppercases and updates the count of their pairs.
-   @param c1 The first character
-   @param c2 The second character
-   @return Returns true if both characters are uppercase, otherwise false
-*/
 int areuppers(char c1, char c2) {
     int test = isupper(c1) && isupper(c2);
     has_pair_upp += test;
     return test;
 }
 
-/**
-   Checks if both characters are digits and updates the count of digit pairs.
-   @param c1 The first character
-   @param c2 The second character
-   @return Returns true if both characters are digits, otherwise false
-*/
 int aredigits(char c1, char c2) {
     int test = isdigit(c1) && isdigit(c2);
     has_pair_dig += test;
     return test;
 }
 
-/**
-   Checks if at least both uppercase and digit pairs exist.
-   @param i The integer to check
-   @return Returns true if the pairs exist until the last, otherwise false
-*/
 int hasUpDg(int i) {
     return (has_pair_upp * has_pair_dig > FALSE && i == LST_PAIR);;
 }
 
-/**
-   Checks if both characters are uppercase letters or digits.
-   @param c1 The first character
-   @param c2 The second character
-   @return Returns true if both are uppercases or digits, otherwise false
-*/
 int uppdig(char c1, char c2) {
     int test = (areuppers(c1, c2) || aredigits(c1, c2));
     return test;
 }
 
-/**
-   Checks if the given character is the end of a string.
-   @param c1 The character to check
-   @return Returns true if the character is the end of a string, otherwise false
-*/
 int end(char c1) {
     return c1 == STR_END;
 }
 
-/**
-   Checks if the given license plate is invalid and prints an error if so.
-   @param pl The license plate to check
-   @return Returns false if the license plate is valid, otherwise true
-*/
 int ckplate_valid(char *pl) {
     int i = BASE;
     has_pair_upp = BASE;
@@ -415,15 +310,6 @@ int ckplate_valid(char *pl) {
     return FALSE;
 }
 
-// p parque 5 0.30 0.50 15.00
-// e parque 00-00-00 01-01-2024 8:02
-
-/**
-   Checks if the given day is valid for the specified month.
-   @param day The day
-   @param mon The month
-   @return Returns true if the day is valid for the month, otherwise false
-*/
 int day_valid(int day, int mon) {
     if (BASE < day && JAN <= mon && mon <= DEC) {
         if (mon == APR || mon == JUN || mon == SEP || mon == NOV)
@@ -436,23 +322,112 @@ int day_valid(int day, int mon) {
     return FALSE;
 }
 
-/**
-   Parses the hour string and extracts the hour and minute components.
-   @param hour The hour string in "hh:mm" format
-   @param hrs Pointer to store the hour component
-   @param min Pointer to store the minute component
-*/
 void parse_hour(char *hour, int *hrs, int *min) {
     sscanf(hour, "%d:%d", hrs, min);
 }
 
-/**
-   Parses the date string and extracts the day, month, and year components.
-   @param date The date string in "dd-mm-yyyy" format
-   @param day Pointer to store the day component
-   @param mon Pointer to store the month component
-   @param yrs Pointer to store the year component
-*/
 void parse_date(char *date, int *day, int *mon, int *yrs) {
     sscanf(date, "%d-%d-%d", day, mon, yrs);
+}
+
+void parse_dh(char *date, char *hour, int *d, int *m, int *y, int *H, int *M) {
+    parse_date(date, d, m, y);
+    parse_hour(hour, H, M);
+}
+
+void to_live_data(char *date, char *hour) {
+    int day, mon, yrs, hrs, min, i = 0;
+    parse_dh(date, hour, &day, &mon, &yrs, &hrs, &min);
+    live[i++] = day;
+    live[i++] = mon;
+    live[i++] = yrs;
+    live[i++] = hrs;
+    live[i] = min;
+}
+
+int is_live_data(int day, int mon, int yrs, int hrs, int min) {
+    if (yrs > live[YRS])
+        return TRUE;
+    else if (yrs == live[YRS]) {
+        if (mon > live[MON])
+            return TRUE;
+        else if (mon == live[MON]) {
+            if (day > live[DAY])
+                return TRUE;
+            else if (day == live[DAY]) {
+                if (hrs > live[HRS])
+                    return TRUE;
+                else if (hrs == live[HRS])
+                    if (min >= live[MIN])
+                        return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+int isValidDateFormat(const char *str) {
+    int len = strlen(str);
+    if (len != 10)
+        return FALSE;
+    for (int i = BASE; i < len; i++) {
+        if (i == 2 || i == 5) {
+            if (str[i] != DT_DIV)
+                return FALSE;
+        }
+        else if (!isdigit(str[i]))
+                return FALSE;
+    }
+    return TRUE;
+}
+
+int isValidTimeFormat(const char *str) {
+    int len = strlen(str);
+    if (len != 4 && len != 5)
+        return FALSE;
+    
+    for (int i = BASE; i < len; i++) {
+        if ((len == 4 && i == 1) || (len == 5 && i == 2)) {
+            if (str[i] != HR_DIV)
+                return FALSE;
+        } 
+        else if (!isdigit(str[i]))
+            return FALSE;
+    }
+    return TRUE;
+}
+
+int isFormatDH(char *date, char *hour) {
+    int dayf, monf, yrsf, hrsf, minf;
+    if (isValidDateFormat(date) && isValidTimeFormat(hour)) {
+        parse_dh(date, hour, &dayf, &monf, &yrsf, &hrsf, &minf);
+        if (0 <= hrsf && hrsf <= 23 && 0 <= minf && minf <= 59)
+            if (1000 <= yrsf && yrsf <= 9999 && day_valid(dayf, monf))
+                return is_live_data(dayf, monf, yrsf, hrsf, minf);
+    }
+    return VALID;
+}
+
+int isFormatD(char *date) {
+    int dayf, monf, yrsf;
+    if (isValidDateFormat(date)) {
+        parse_date(date, &dayf, &monf, &yrsf);
+            if (1000 <= yrsf && yrsf <= 9999 && day_valid(dayf, monf))
+                return !is_live_data(dayf, monf, yrsf, 0, 0);
+    }
+    return VALID;
+}
+
+int null_entry(park *parks, int i, int j) {
+    if (parks[i] != NULL && parks[i]->entry[j] != NULL)
+        return (parks[i]->entry[j][0] != NULL);
+    return 0;
+}
+
+void carIn(char *plate) {
+    for (int i = 0; i < carlen; i++)
+        if (cars[i] == NULL) {
+            cars[i] = plate;
+            break;
+        }
 }
