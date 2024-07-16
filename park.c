@@ -68,18 +68,18 @@
 #define ERROR_PLATE_INVALID "invalid licence plate.\n"
 #define ERROR_ANY_ENTRY ": no entries found in any parking.\n"
 
-static int comma_count = NINT; // Number of commas
-static int i_parks = NINT; // Number of parks
-static int park_size = PARK_MAX; // Maximum park size
-static int reglen = REGS_MAX; // Maximum length of registration
-static int carlen = CARS_MAX; // Maximum number of cars
-static size_t tok_len = NINT; // Length of token
-static int had_error = NINT; // Error flag
-static int bill_id = -1; // Bill ID
-static int addpark = 0; // Flag for adding park
-static int has_pair_upp = 0; // Flag for uppercase pair
-static int has_pair_dig = 0; // Flag for digit pair
-static int park_id = -1; // Park ID
+static int comma_count = NINT;
+static int i_parks = NINT;
+static int park_size = PARK_MAX;
+static int reglen = REGS_MAX;
+static int carlen = CARS_MAX;
+static size_t tok_len = NINT;
+static int had_error = NINT;
+static int bill_id = -1;
+static int addpark = 0;
+static int has_pair_upp = 0;
+static int has_pair_dig = 0;
+static int park_id = -1;
 
 typedef struct Bill {
     char *plt;
@@ -101,11 +101,11 @@ typedef struct parks {
 
 } *park;
 
-park *parks; // Define pointers to park structures
-char **cars; // Define array of strings for cars
+park *parks;
+char **cars;
 
 struct parks *qparks;
-int live[5]; // Define array of integers for the live status
+int live[5];
 
 char *str_end(char *str) {
     size_t i;
@@ -126,7 +126,6 @@ char *del_blank(char *str) {
             comma_count++;
 
         if (comma_count != FRST) {
-            // Remove leading blanks
             if (isspace(*ptr))
                 if (!prev_blank)
                     str[prev_blank = i++] = BLNK_CHR;
@@ -134,7 +133,6 @@ char *del_blank(char *str) {
             if (!isspace(*ptr) && (prev_blank = null) == BASE)
                 str[i++] = *ptr;
         } else {
-            // Copy characters within quoted parts
             str[i++] = *ptr;
         }
         ptr++;
@@ -147,7 +145,6 @@ char *del_blank(char *str) {
     else if (str[j++] == BLNK_CHR && str[j++] == BLNK_CHR && str[j] == STR_END)
         return NULL_STR;
 
-    // Return the modified string
     return str;
 }
 
@@ -233,7 +230,6 @@ int ckcost_out(float v15, float v1h15, float vmax) {
 int ckpark_out() {
     int len = park_size, count_free = BASE;
     
-    // Count the number of free parking spots
     while (len--)
         if (parks[len] == NULL)
             count_free++;
@@ -430,4 +426,360 @@ void carIn(char *plate) {
             cars[i] = plate;
             break;
         }
+}
+
+int entry_invalid(char *plate) {
+    for (int i = 0; i < carlen; i++)
+        if (cars[i] != NULL && !strcmp(plate, cars[i]))
+            return 1;
+    return 0;
+}  
+
+void carOut(char *plate) {
+    for (int i = 0; i < carlen; i++) {
+        if (cars[i] != NULL && !strcmp(plate, cars[i])) {
+            for (int j = i; j < carlen - 1; j++) {
+                cars[j] = cars[j + 1];
+            }
+            break;
+        }
+    }
+}
+
+int exit_invalid(char *plate, park Park) {
+    int cnt = 0;
+    for (int j =0; j < reglen; j++)
+        if (Park != NULL && Park->entry[j] != NULL)
+            if (Park->entry[j][0] != NULL)
+                if (!strcmp(Park->entry[j][0], plate)) cnt++;
+    return !(cnt % 2);
+}
+
+void date_invalid_ckd() {
+    had_error = TRUE;
+    printf(ERROR_DATE_INVALID);
+}
+
+int date_hour_invalid(char *date, char *hour) {
+    if (isFormatDH(date, hour))
+        return VALID;
+    date_invalid_ckd();
+    return INVALID;
+}
+
+int date_invalid(char *date) {
+    if (isFormatD(date))
+        return VALID;
+    date_invalid_ckd();
+    return INVALID;
+}
+
+void print_parks() {
+    int i = NINT;
+    while (i < park_size) {
+        if (parks[i] != NULL) {
+            printf("%s ", parks[i]->name);
+            printf("%d ", parks[i]->spots);
+            printf("%d\n", parks[i]->free_spots);
+        }
+    i++;
+    }
+}
+
+char* gstr() {
+    return strtok(NULL, BLNK_STR);
+}
+
+int gstrint() {
+    return strtol(gstr(), NULL, NBASE);
+}
+
+float gstrfl() {
+    return strtod(gstr(), NULL);
+}
+
+int invalid_park_name(char* name) {
+    for (size_t i = 0; i < strlen(name); i++) {
+        if ('0' <= name[i] && name[i] <= '9') {
+            printf("invalid park name.\n");
+            had_error = TRUE;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void check_p_error(char *name, int spot, float v15, float v1h15, float vmax) {
+    if (invalid_park_name(name));
+    else if (park_exist(name)) {
+        had_error = TRUE;
+        printf("%s%s", name, ERROR_PARK_EXIST);
+    }
+    else if (ckspot_out(spot));
+    else if (ckcost_out(v15, v1h15, vmax));
+    else ckpark_out();
+}
+
+void has_park_e_s_error(char* name) {
+    had_error = TRUE;
+    printf(ERROR_SFORMAT, name, ERROR_NO_PARK);
+}
+
+void check_e_error(char *name, char *plate, char *date, char *hour) {
+    if (!park_exist(name)) has_park_e_s_error(name);
+    else if (ckpark_full(name));
+    else if (ckplate_valid(plate));
+    else if (entry_invalid(plate)) {
+        had_error = TRUE;
+        printf(ERROR_SFORMAT, plate, ERROR_YES_ENTRY);
+    }
+    else date_hour_invalid(date, hour);
+}
+
+void check_s_error(char *name, char *plate, char *date, char *hour) {
+    if (!park_exist(name)) has_park_e_s_error(name);
+    else if (ckplate_valid(plate)); 
+    else if (exit_invalid(plate, parks[park_id])) {
+        had_error = TRUE;
+        printf(ERROR_SFORMAT, plate, ERROR_NO_ENTRY);
+    }
+    else date_hour_invalid(date, hour);
+}
+
+void any_entry(char *plate) {
+    int i = -1; int j = -1;
+    while (++i < park_size) for (j =0; j < reglen; j++) 
+        if (null_entry(parks, i, j)) {
+                if (!strcmp(parks[i]->entry[j][0], plate)) return;
+            }
+    had_error = TRUE;
+    printf("%s%s", plate, ERROR_ANY_ENTRY);
+}
+
+void check_v_error(char *plate) {
+    if (ckplate_valid(plate));
+    else any_entry(plate);
+}
+
+void check_f_error(char *name, char *date) {
+    if (!park_exist(name)) has_park_e_s_error(name);
+    else date_invalid(date);
+}
+
+void exec_p(park *parks, park Park) {
+    int i = NINT;
+    while (i < park_size) {
+        if (parks[i] == NULL) {
+                parks[i] = Park;
+                return;
+            }
+        i++;
+    }
+}
+
+void set_park_id() {
+    park_id = -1;
+}
+
+void exec_e_s(park Park, char *plate, char *date, char *hour) {
+    while (i_parks >= reglen) return;
+        Park->entry[i_parks][0] = plate;
+        Park->entry[i_parks][1] = strdup(date);
+        Park->entry[i_parks][2] = strdup(hour);
+        i_parks++;
+    to_live_data(date, hour);
+}
+
+int cmp(const void *a, const void *b) {
+    const struct parks *parkA = (const struct parks *)a;
+    const struct parks *parkB = (const struct parks *)b;
+    return strcmp(parkA->name, parkB->name);
+}
+
+void swap(struct parks *a, struct parks *b) {
+    struct parks temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+int partition(struct parks *qparks, int low, int high, int (*func)(const void *, const void *)) {
+    struct parks pivot = qparks[high];
+    int i = low - 1;
+    for (int j = low; j <= high - 1; j++) {
+        if (func(&qparks[j], &pivot) < 0) {
+            i++;
+            swap(&qparks[i], &qparks[j]);
+        }
+    }
+    swap(&qparks[i + 1], &qparks[high]);
+    return (i + 1);
+}
+
+void quickSort(struct parks *qparks, int low, int high, int (*func)(const void *, const void *)) {
+    if (low < high) {
+        int pi = partition(qparks, low, high, func);
+        quickSort(qparks, low, pi - 1, func);
+        quickSort(qparks, pi + 1, high, func);
+    }
+}
+
+void qPark(struct parks *qparks, int size, 
+    int (*func)(const void *, const void *)) {
+        quickSort(qparks, 0, size - 1, func);
+}
+
+struct parks *parksdup(park *parks) {
+    for (int i = 0; i < addpark; i++) {
+        if (parks[i] != NULL && parks[i]->name != NULL) {
+            qparks[i].name = strdup(parks[i]->name);
+            qparks[i].entry = parks[i]->entry;
+        }
+    }
+    return qparks;
+}
+
+void exec_v(char *plate) {
+    int i = -1; 
+    int j = 0;
+    char *name, *date, *hour;
+
+    int d, mo, y, h, mn;
+
+    while (++i < addpark){
+        int cnt = 0;
+        for (j =0; j < reglen; j++) {
+            if (qparks[i].entry[j] != NULL && qparks[i].entry[j][0] != NULL) {
+                if (!strcmp(qparks[i].entry[j][0], plate)){
+                    if (cnt == 0) {
+                        name = qparks[i].name;
+                        date = qparks[i].entry[j][1];
+                        hour = qparks[i].entry[j][2];
+                        parse_dh(date, hour, &d, &mo, &y, &h, &mn);
+                        printf("%s %02d-%02d-%d %02d:%02d",
+                        name, d, mo, y, h, mn);
+                        cnt++;
+                    }
+                    else if (cnt == 1) {
+                        date = qparks[i].entry[j][1];
+                        hour = qparks[i].entry[j][2];
+                        parse_dh(date, hour, &d, &mo, &y, &h, &mn);
+                        printf(" %02d-%02d-%d %02d:%02d\n", d, mo, y, h, mn);
+                        cnt = 0;
+                    }
+                }
+
+            }
+        if (j == reglen - 1 && cnt == 1) printf("\n");
+        }
+        
+    }
+}
+
+int daymo(int mo, int yr) {
+    (void) yr;
+    int day[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    return day[mo - 1];
+}
+
+long long datemin(int d, int mo, int y, int h, int mn) {
+    long long sum = 0;
+    for (int yr = 2024; yr < y; yr++) sum += 365 * 24 * 60;
+    for (int m = 1; m < mo; ++m) sum += daymo(m, y) * 24 * 60;
+    sum += (d - 1) * 24 * 60;
+    sum += h * 60 + mn;
+    return sum;
+}
+
+void neg_then_nul(int *Nv15, int *Nvh15) {
+    if (*Nv15 < 0) *Nv15 = 0;
+    if (*Nvh15 < 0) *Nvh15 = 0;
+}
+
+float val(char *Di, char *Hi, char *Df, char *Hf, FL v15, FL vh15, FL vd) {
+    float v = 0;
+    int di, moi, yi, hi, mni, df, mof, yf, hf, mnf;
+    parse_dh(Di, Hi, &di, &moi, &yi, &hi, &mni);
+    parse_dh(Df, Hf, &df, &mof, &yf, &hf, &mnf);
+    long long Ni = datemin(di, moi, yi, hi, mni);
+    long long Nf = datemin(df, mof, yf, hf, mnf);
+    long long diff = Nf - Ni + 15 - 1;
+    int Nv15, Nvh15, Nvd;
+    Nvd = diff/(24 * 60);
+    diff -= Nvd * 24 * 60;
+    Nv15 = diff > 60 ? 4 : diff / 15;
+    Nvh15 = (diff - 60)/15;
+    neg_then_nul(&Nv15, &Nvh15);
+    if (Nv15 * v15 + Nvh15 * vh15 > vd) return v = Nvd * vd + vd; 
+    return v = (float) Nvd * vd + Nvh15 * vh15 + Nv15 * v15;
+}
+
+void exec_f(park Park, char *date) {
+    char *pl, *hr; float vl;
+    int h, m;
+    for (int i = 0; i <= bill_id; i++) {
+        if (Park->bills[i].dtt != NULL) {
+            if (!strcmp(date, Park->bills[i].dtt)) {
+                pl = Park->bills[i].plt;
+                hr = strdup(Park->bills[i].hrs);
+                vl = Park->bills[i].vlr;
+                parse_hour(hr, &h, &m);
+                printf("%s %02d:%02d %.2f\n", pl, h, m, vl);
+            }
+        }
+    }
+}
+
+void cleanNull(park *parks) {
+    int count = 0;
+    for (int i = 0; i < park_size; i++) {
+        if (parks[i] != NULL) {
+            parks[count++] = parks[i];
+        }
+    }
+
+    for (int i = count; i < park_size; i++) {
+        parks[i] = NULL;
+    }
+}
+
+void exec_r(park Park) {
+    for (int i = 0; i < park_size; i++)
+        if (parks[i] == Park) {
+            parks[i] = NULL;
+            break;
+        }
+
+    if (addpark + 1 <= park_size) {
+        addpark--;
+        if (addpark > 1)
+            for (int i = 0; i < addpark - 1; i++)
+                free(qparks[i].name);
+        free(qparks);
+        qparks = malloc(sizeof(struct parks) * addpark);
+        cleanNull(parks);
+        qparks = parksdup(parks);
+        qPark(qparks, addpark, cmp);
+    }
+
+    for (int i = 0; i < reglen; i++) {
+        if (Park->entry[i][0] != NULL) 
+            for (int j = 0; j < 3; j++) {
+                if (j == 0)
+                    carOut(Park->entry[i][0]);
+                else
+                    free(Park->entry[i][j]);
+            }
+    }
+    free(Park->entry);
+    for (int i = 0; i <= bill_id; i++)
+        if (Park->bills[i].plt != NULL) {
+            free(Park->bills[i].plt);
+            free(Park->bills[i].dtt);
+            free(Park->bills[i].hrs);
+        }
+    free(Park->bills);
+    free(Park->name);
+    free(Park);
+    for (int i = 0; i < addpark; i++) 
+            printf("%s\n", qparks[i].name);
 }
