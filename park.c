@@ -783,3 +783,93 @@ void exec_r(park Park) {
     for (int i = 0; i < addpark; i++) 
             printf("%s\n", qparks[i].name);
 }
+
+void exec_p_cmd(char *str) {
+    char* name = get_tok(str);
+    if (name == NULL) print_parks();
+    else {
+        park Park = malloc(sizeof(struct parks));
+        Park->name = malloc(sizeof(char)*(strlen(name) + FRST));
+        strcpy(Park->name, name);
+        int spot = Park->spots = gstrint();
+        float v15 = Park->val_15 = gstrfl();
+        float v1h15 = Park->val_15_1h = gstrfl();
+        float vmax = Park->val_max_day = gstrfl();
+        Park->free_spots = spot;
+        Park->entry = malloc(sizeof(char***) * reglen);
+        for (int i = 0; i < reglen; i++) 
+            Park->entry[i] = malloc(sizeof(char**) *3);
+        Park->bills = malloc(sizeof(bill) * reglen);
+        check_p_error(name, spot, v15, v1h15, vmax); 
+        if (ckreset_error()) return;
+        exec_p(parks, Park);
+        if (addpark + 1 <= park_size) {
+            addpark++;
+            if (addpark > 1)
+                for (int i = 0; i < addpark - 1; i++)
+                    free(qparks[i].name);
+            free(qparks);
+            qparks = malloc(sizeof(struct parks) * addpark);
+            qparks = parksdup(parks);
+            qPark(qparks, addpark, cmp);
+        }
+    }
+    set_park_id();
+}
+
+void exec_e_cmd(char *str) {
+    char *name = get_tok(str);
+    char *plate = gstr();
+    char *date = gstr();
+    char *hour = gstr();
+    check_e_error(name, plate, date, hour);
+    if (ckreset_error()) return;
+    if (!entry_invalid(plate)) 
+        carIn(plate);
+    exec_e_s(parks[park_id], plate, date, hour);
+    printf("%s %d\n", parks[park_id]->name, --parks[park_id]->free_spots);
+    set_park_id();
+}
+
+void remDup(char **array, int size) {
+    int i, j, k;
+    for (i = 0; i < size - 1; i++) {
+        if (array[i] != NULL) {
+            for (j = i + 1; j < size; j++) {
+                if (array[j] != NULL && strcmp(array[i], array[j]) == 0) {
+                    free(array[j]);
+                    for (k = j; k < size - 1; k++) {
+                        array[k] = array[k + 1];
+                    }
+                    array[size - 1] = NULL;
+                    size--;
+                    j--;
+                }
+            }
+        }
+    }
+}
+
+void print_bills(park Park) {
+    float sum; char* date;
+    char *dttarr[bill_id+1]; int len = 0;
+    for (int j = 0; j <= bill_id; j++)
+        if (Park->bills[j].dtt != NULL){ 
+            len++;
+            dttarr[j] = strdup(Park->bills[j].dtt);}
+        else dttarr[j] = NULL;
+    remDup(dttarr, bill_id + 1);
+    for (int j = 0; j <= bill_id; j++) {
+        date = dttarr[j];
+        if (date != NULL) {
+            sum = 0;
+            for (int i = 0; i <= bill_id; i++){
+                if (Park->bills[i].dtt != NULL && date != NULL){
+                    if (!strcmp(date, Park->bills[i].dtt)) 
+                        sum += Park->bills[i].vlr;
+                }
+            }
+            printf("%s %.2f\n", date, sum);
+        }
+    }
+}
